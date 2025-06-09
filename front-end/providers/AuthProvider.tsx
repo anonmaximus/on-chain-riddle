@@ -37,7 +37,7 @@ export function AuthProvider(props: IProps) {
 	const [jwtContent, setJwtContent] = useState<UserJwtResource | null>(getJwtFromString(jwtPairString));
 	const [jwtPair, setJwtPair] = useState<JwtPairResource | null>(jwtPairString ? JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtPairString)) : null);
 
-	const { address, isConnected, isReconnecting, isConnecting, connector, status, chain } = useAccount();
+	const { address, isConnected, isReconnecting, isConnecting, connector, status, chain, isDisconnected } = useAccount();
 	const { signMessageAsync, isError: isSignError, error: signError } = useSignMessage();
 	const { disconnect } = useDisconnect();
 
@@ -56,31 +56,13 @@ export function AuthProvider(props: IProps) {
 		return authService.logout(...args).finally(() => setIsLoading(false));
 	}, []);
 
-	const logConnectionState = useCallback(() => {
-		console.group("🔐 Auth Provider - Connection State");
-		console.log("Address:", address);
-		console.log("Status:", status);
-		console.log("Is Connected:", isConnected);
-		console.log("Is Connecting:", isConnecting);
-		console.log("Is Reconnecting:", isReconnecting);
-		console.log("Connector:", connector?.name);
-		console.log("Chain:", chain?.name);
-		console.log("Can Sign:", !!signMessageAsync);
-		console.log("Current JWT Address:", jwtContent?.address);
-		console.groupEnd();
-	}, [address, status, isConnected, isConnecting, isReconnecting, connector, chain, signMessageAsync, jwtContent]);
-
 	useEffect(() => {
-		logConnectionState();
-
-		if (!isConnected && !isReconnecting && !isConnecting) {
-			console.log("Not connected, logging out...");
+		if (isDisconnected) {
 			logout();
 			return;
 		}
 
 		if (address && isConnected && signMessageAsync && connector) {
-			console.log("Connected with address:", address);
 			const walletAddress = address.toLowerCase();
 			const resource = UserPreSignRequestResource.hydrate<UserPreSignRequestResource>({ address: walletAddress });
 
@@ -88,20 +70,21 @@ export function AuthProvider(props: IProps) {
 				console.log("Already authenticated with this address:", walletAddress);
 				return;
 			}
-			console.log("Pre-signing with resource:", resource);
 
 			preSign(resource)
 				.then(async (response) => {
-					console.log("Attempting to sign message with connector:", connector.name);
-
 					const signature = await signMessageAsync({
 						message: response.messageToSign,
 					});
+
+					console.log("Signature received:", signature);
 
 					const signInResource = UserSignInRequestResource.hydrate<UserSignInRequestResource>({
 						address: walletAddress,
 						signature,
 					});
+
+					console.log("signInResource:", signInResource);
 
 					return signIn(signInResource);
 				})
@@ -110,7 +93,7 @@ export function AuthProvider(props: IProps) {
 					disconnect();
 				});
 		}
-	}, [address, isConnected, isReconnecting, isConnecting, signMessageAsync, jwtContent, disconnect, connector, logConnectionState]);
+	}, [address, isConnected, signMessageAsync, jwtContent, disconnect, connector, isDisconnected]);
 
 	useEffect(() => {
 		if (isSignError && signError) {
