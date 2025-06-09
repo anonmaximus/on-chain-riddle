@@ -3,8 +3,7 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { Navbar as HeroUINavbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle } from "@heroui/navbar";
 
 import NextLink from "next/link";
-
-import { ConnectWallet } from "../atoms/ConnectWallet";
+import { ConnectWalletButton } from "./ConnectWalletButton";
 
 export function Navbar() {
 	return (
@@ -23,7 +22,7 @@ export function Navbar() {
 					<ThemeSwitch />
 				</NavbarItem>
 				<NavbarItem className="hidden sm:flex gap-2">
-					<ConnectWallet />
+					<ConnectWalletButton />
 				</NavbarItem>
 
 				<NavbarMenuToggle className="sm:hidden" />
@@ -34,7 +33,7 @@ export function Navbar() {
 					<ThemeSwitch />
 				</NavbarMenuItem>
 				<NavbarMenuItem>
-					<ConnectWallet />
+					<ConnectWalletButton />
 				</NavbarMenuItem>
 			</NavbarMenu>
 		</HeroUINavbar>

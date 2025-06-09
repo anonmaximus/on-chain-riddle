@@ -2,13 +2,13 @@
 
 import AuthService from "@/services/AuthService";
 import CookieService from "@/services/CookieService";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import JwtPairResource from "common/resources/Auth/JwtPairResource";
 import UserJwtResource from "common/resources/User/UserJwtResource";
 import UserPreSignRequestResource from "common/resources/User/UserPreSignRequestResource";
 import UserSignInRequestResource from "common/resources/User/UserSignInRequestResource";
 import { jwtDecode } from "jwt-decode";
-import React, { use, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { container } from "tsyringe";
 
 const authService = container.resolve(AuthService);
@@ -51,16 +51,18 @@ export function AuthProvider(props: IProps) {
 	const [jwtContent, setJwtContent] = useState<UserJwtResource | null>(getJwtFromString(jwtPairString));
 	const [jwtPair, setJwtPair] = useState<JwtPairResource | null>(jwtPairString ? JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtPairString)) : null);
 
-	const { publicKey, wallet, signMessage, disconnect, disconnecting } = useWallet();
+	const { address, isConnected, isReconnecting, isConnecting } = useAccount();
+	const { signMessageAsync } = useSignMessage();
+	const { disconnect } = useDisconnect();
 
 	useEffect(() => {
-		if (disconnecting) {
+		if (!isConnected && !isReconnecting && !isConnecting) {
 			logout();
 			return;
 		}
 
-		if (publicKey && wallet && signMessage) {
-			const walletAddress = publicKey.toBase58();
+		if (address && isConnected && signMessageAsync) {
+			const walletAddress = address.toLowerCase();
 			const resource = UserPreSignRequestResource.hydrate<UserPreSignRequestResource>({ address: walletAddress });
 
 			if (jwtContent?.address === walletAddress) {
@@ -69,20 +71,27 @@ export function AuthProvider(props: IProps) {
 
 			preSign(resource)
 				.then(async (response) => {
-					const bs58Module = await import("bs58");
-					const bs58 = bs58Module.default;
-					const messageUint8 = new TextEncoder().encode(response.messageToSign);
-					const signatureUint8 = await signMessage(messageUint8);
-					const signature = bs58.encode(signatureUint8);
-					const signInResource = UserSignInRequestResource.hydrate<UserSignInRequestResource>({
-						address: walletAddress,
-						signature,
-					});
-					return signIn(signInResource);
+					try {
+						const signature = await signMessageAsync({
+							message: response.messageToSign,
+						});
+
+						const signInResource = UserSignInRequestResource.hydrate<UserSignInRequestResource>({
+							address: walletAddress,
+							signature,
+						});
+						return signIn(signInResource);
+					} catch (error) {
+						console.error("Error signing message:", error);
+						disconnect();
+					}
 				})
-				.catch(() => disconnect());
+				.catch((error) => {
+					console.error("Error during preSign:", error);
+					disconnect();
+				});
 		}
-	}, [publicKey, wallet, signMessage, jwtContent, disconnect, disconnecting]);
+	}, [address, isConnected, isReconnecting, isConnecting, signMessageAsync, jwtContent, disconnect]);
 
 	// When the jwt pair changes, we update the cookies
 	useEffect(() => {
