@@ -1,0 +1,33 @@
+{
+	"name": "express-next",
+	"version": "1.0.0",
+	"description": "",
+	"scripts": {
+		"postinstall": "npm run install:common && npm run install:front-end && npm run install:back-end",
+		"install:common": "cd common && npm install && npm run build",
+		"install:front-end": "cd front-end && npm install",
+		"install:cron": "npm run install:common && npm run install:back-end",
+		"install:back-end": "cd back-end && npm install",
+		"build": "npm run build:common && npm run build:front-end && npm run build:back-end",
+		"build:common": "cd common && npm run build",
+		"build:front-end": "cd front-end && npm run build",
+		"build:back-end": "cd back-end && npm run build",
+		"build:cron": "npm run build:common && npm run build:back-end",
+		"watch:dev": "npm run watch:back-end & npm run watch:front-end",
+		"watch:front-end": "cd front-end && npm run dev",
+		"watch:back-end": "cd back-end && npm run watch",
+		"start:prod": "npm run start:back-end & npm run start:front-end",
+		"start:front-end": "cd front-end && npm run start",
+		"start:back-end": "cd back-end && npm run start:prod",
+		"cron:dev": "cd back-end && npm run build && npm run cron:dev",
+		"cron:prod": "cd back-end && npm run cron:prod",
+		"format": "prettier --write \"**/*.{tsx,ts,css,scss}\" --config ./prettier.config.js",
+		"format:test": "prettier --find-config-path"
+	},
+	"keywords": [],
+	"author": "anonMaximus",
+	"license": "ISC",
+	"dependencies": {
+		"prettier": "^3.5.0"
+	}
+}

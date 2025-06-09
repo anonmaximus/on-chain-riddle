@@ -1,0 +1,93 @@
+{
+	"name": "back-end",
+	"version": "1.0.0",
+	"description": "",
+	"main": "./dist/entries/App.js",
+	"scripts": {
+		"watch": "nodemon --watch",
+		"build": "npm run migrate:generate && tsc --build --clean && tsc",
+		"postbuild": "copyfiles -u 2 --error \"src/public/**/*\" dist/public",
+		"start:dev": "npm run build && node --env-file=.env ./dist/entries/App.js",
+		"start:prod": "npm run migrate:deploy && npm run db:seed && node ./dist/entries/App.js",
+		"cron:prod": "node ./dist/entries/Cron.js",
+		"cron:dev": "node --env-file=.env ./dist/entries/Cron.js",
+		"migrate:dev": "npx prisma migrate dev",
+		"migrate:deploy": "npx prisma migrate deploy",
+		"migrate:status": "npx prisma migrate status",
+		"migrate:help": "npx prisma migrate --help",
+		"migrate:generate": "npx prisma generate",
+		"db:client": "npx prisma studio",
+		"db:seed": "npx prisma db seed --",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"upload-product-files": "npm run build && node dist/batchUploadProductFiles/productFiles/uploadProductFiles.js"
+	},
+	"_moduleAliases": {
+		"#App": "./dist/app",
+		"#Api": "./dist/app/http/api",
+		"#Crons": "./dist/app/crons",
+		"#Services": "./dist/services",
+		"#Databases": "./dist/databases",
+		"#Entries": "./dist/entries",
+		"#Config": "./dist/config",
+		"#Test": "./dist/test",
+		"#Utils": "./dist/utils"
+	},
+	"author": "anonMaximus",
+	"license": "ISC",
+	"nodemonConfig": {
+		"verbose": false,
+		"watch": [
+			"./src/**/*"
+		],
+		"ext": "ts,json",
+		"ignore": [
+			"node_modules/**/*",
+			".git/**/*",
+			"dist/**/*"
+		],
+		"exec": "npm run start:dev"
+	},
+	"dependencies": {
+		"@prisma/client": "6.3.1",
+		"@tsconfig/node-lts": "22.0.1",
+		"@types/bcrypt": "^5.0.2",
+		"@types/cookie-parser": "1.4.8",
+		"@types/cors": "2.8.17",
+		"@types/crypto-js": "4.2.2",
+		"@types/express-http-proxy": "^1.6.6",
+		"@types/jsonwebtoken": "9.0.8",
+		"@types/multer": "1.4.12",
+		"@types/node": "22.13.1",
+		"@types/uuid": "10.0.0",
+		"bcrypt": "^5.1.1",
+		"bs58": "^6.0.0",
+		"class-transformer": "^0.5.1",
+		"class-validator": "0.14.1",
+		"common": "file:../common/dist",
+		"cookie-parser": "1.4.7",
+		"copyfiles": "^2.4.1",
+		"cors": "^2.8.5",
+		"cron": "3.5.0",
+		"crypto-js": "4.2.0",
+		"dotenv": "16.4.7",
+		"express": "^5.0",
+		"express-basic-auth": "^1.2.1",
+		"express-http-proxy": "^2.1.1",
+		"jsonwebtoken": "^9.0.2",
+		"module-alias": "^2.2.3",
+		"nodemon": "3.1.9",
+		"prisma": "6.3.1",
+		"reflect-metadata": "0.2.2",
+		"sharp": "^0.33.5",
+		"ts-pattern": "5.6.2",
+		"tsyringe": "^4.8.0",
+		"tweetnacl": "^1.0.3",
+		"typescript": "^5.7.3",
+		"uuid": "11.0.5",
+		"winston": "3.17.0"
+	},
+	"prisma": {
+		"schema": "prisma/schema.prisma",
+		"seed": "node ./dist/entries/Seed.js"
+	}
+}
