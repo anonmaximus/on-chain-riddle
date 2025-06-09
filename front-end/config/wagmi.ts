@@ -1,9 +1,17 @@
 import { http, createConfig } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { coinbaseWallet, metaMask, walletConnect } from "wagmi/connectors";
+import { coinbaseWallet, metaMask, injected } from "wagmi/connectors";
 import { getDefaultConfig } from "connectkit";
 
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!;
+
+const injectedConnector = injected({
+	target: () => ({
+		id: "injected",
+		name: "Injected Wallet",
+		provider: typeof window !== "undefined" ? window.ethereum : undefined,
+	}),
+});
 
 export const wagmiConfig = createConfig(
 	getDefaultConfig({
@@ -16,6 +24,6 @@ export const wagmiConfig = createConfig(
 		appDescription: "On Chain Riddle is a decentralized platform that allows users to solve riddles on the blockchain.",
 		appUrl: "http://localhost:3002",
 
-		connectors: [metaMask(), coinbaseWallet({ appName: "On Chain Riddle" })],
+		connectors: [injectedConnector, metaMask(), coinbaseWallet({ appName: "On Chain Riddle" })],
 	}),
 );
