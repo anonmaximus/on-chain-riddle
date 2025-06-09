@@ -4,7 +4,7 @@ import UserServiceClassToken from "common/injectables/UserServiceClassToken";
 import UserJwtResource from "common/resources/User/UserJwtResource";
 import UserSignInRequestResource from "common/resources/User/UserSignInRequestResource";
 import { singleton } from "tsyringe";
-import nacl from "tweetnacl";
+import { ethers } from "ethers";
 
 import AuthService from "./AuthService";
 
@@ -50,7 +50,7 @@ export default class UserService implements UserServiceClassToken {
 	public async getByAddress(address: string) {
 		return this.dbClient.user.findUnique({
 			where: {
-				address,
+				address: address.toLowerCase(), // Ethereum addresses en minuscules
 			},
 			include: {
 				role: {
@@ -64,9 +64,11 @@ export default class UserService implements UserServiceClassToken {
 	}
 
 	public async getOrCreateUser(address: string) {
+		const normalizedAddress = address.toLowerCase();
+
 		const user = await this.dbClient.user.findUnique({
 			where: {
-				address,
+				address: normalizedAddress,
 			},
 		});
 
@@ -74,7 +76,7 @@ export default class UserService implements UserServiceClassToken {
 
 		return this.dbClient.user.create({
 			data: {
-				address,
+				address: normalizedAddress,
 				role: {
 					connect: {
 						name: ERoleName.restricted,
@@ -85,34 +87,24 @@ export default class UserService implements UserServiceClassToken {
 	}
 
 	public async signIn(userResource: UserSignInRequestResource) {
-		const bs58Module = await import("bs58");
-		const bs58 = bs58Module.default;
+		const normalizedAddress = this.normalizeAddress(userResource.address);
+		const user = await this.getByAddress(normalizedAddress);
 
-		const user = await this.getByAddress(userResource.address);
+		if (!user) {
+			throw new Error("User not found");
+		}
 
-		if (!user) throw new Error("User not found");
-
-		if (!user.challenge) throw new Error("Challenge not found");
+		if (!user.challenge) {
+			throw new Error("Challenge not found");
+		}
 
 		const message = `Sign this message to authenticate: ${user.challenge.nonce}`;
-		const messageUint8 = new TextEncoder().encode(message);
 
-		let signatureUint8;
-		try {
-			signatureUint8 = bs58.decode(userResource.signature);
-		} catch (e) {
-			throw new Error("Invalid signature format");
+		const recoveredAddress = ethers.verifyMessage(message, userResource.signature);
+
+		if (recoveredAddress.toLowerCase() !== normalizedAddress) {
+			throw new Error("Invalid signature: address mismatch");
 		}
-
-		let publicKeyUint8;
-		try {
-			publicKeyUint8 = bs58.decode(userResource.address);
-		} catch (e) {
-			throw new Error("Invalid public key format");
-		}
-
-		const isValid = nacl.sign.detached.verify(messageUint8, signatureUint8, publicKeyUint8);
-		if (!isValid) throw new Error("Invalid signature");
 
 		const userWithUpdatedRole = await this.dbClient.user.update({
 			where: {
@@ -135,8 +127,17 @@ export default class UserService implements UserServiceClassToken {
 			},
 		});
 
-		return this.authService.generateJwtPair({
+		const jwtPair = await this.authService.generateJwtPair({
 			user: UserJwtResource.hydrate<UserJwtResource>(userWithUpdatedRole),
 		});
+
+		return jwtPair;
+	}
+
+	private normalizeAddress(address: string): string {
+		if (!ethers.isAddress(address)) {
+			throw new Error("Invalid Ethereum address format");
+		}
+		return ethers.getAddress(address).toLowerCase(); // Checksum puis minuscules
 	}
 }

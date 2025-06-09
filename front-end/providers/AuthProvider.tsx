@@ -31,69 +31,75 @@ type IProps = {
 
 export const AuthContext = React.createContext<IAuthContext>(undefined!);
 
-function getJwtFromString(jwtString: string | null) {
-	// If the jwt string is empty, we set the jwt content to null
-	if (!jwtString) return null;
-	try {
-		const jwtPair = JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtString));
-		const jwtPayload = jwtDecode<{ user: UserJwtResource }>(jwtPair.accessToken);
-
-		if (!jwtPayload || typeof jwtPayload === "string") return null;
-
-		return UserJwtResource.hydrate<UserJwtResource>(jwtPayload.user);
-	} catch (error) {
-		console.error(error);
-		return null;
-	}
-}
-
 export function AuthProvider(props: IProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [jwtPairString, setJwtPairString] = useState<string | null>(cookieService.getJwtPairString());
 	const [jwtContent, setJwtContent] = useState<UserJwtResource | null>(getJwtFromString(jwtPairString));
 	const [jwtPair, setJwtPair] = useState<JwtPairResource | null>(jwtPairString ? JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtPairString)) : null);
 
-	const { address, isConnected, isReconnecting, isConnecting } = useAccount();
-	const { signMessageAsync } = useSignMessage();
+	const { address, isConnected, isReconnecting, isConnecting, connector, status, chain, isDisconnected } = useAccount();
+	const { signMessageAsync, isError: isSignError, error: signError } = useSignMessage();
 	const { disconnect } = useDisconnect();
 
+	const preSign = useCallback((...args: Parameters<AuthService["preSign"]>) => {
+		setIsLoading(true);
+		return authService.preSign(...args).finally(() => setIsLoading(false));
+	}, []);
+
+	const signIn = useCallback((...args: Parameters<AuthService["signIn"]>) => {
+		setIsLoading(true);
+		return authService.signIn(...args).finally(() => setIsLoading(false));
+	}, []);
+
+	const logout = useCallback((...args: Parameters<AuthService["logout"]>) => {
+		setIsLoading(true);
+		return authService.logout(...args).finally(() => setIsLoading(false));
+	}, []);
+
 	useEffect(() => {
-		if (!isConnected && !isReconnecting && !isConnecting) {
+		if (isDisconnected) {
 			logout();
 			return;
 		}
 
-		if (address && isConnected && signMessageAsync) {
+		if (address && isConnected && signMessageAsync && connector) {
 			const walletAddress = address.toLowerCase();
 			const resource = UserPreSignRequestResource.hydrate<UserPreSignRequestResource>({ address: walletAddress });
 
 			if (jwtContent?.address === walletAddress) {
+				console.log("Already authenticated with this address:", walletAddress);
 				return;
 			}
 
 			preSign(resource)
 				.then(async (response) => {
-					try {
-						const signature = await signMessageAsync({
-							message: response.messageToSign,
-						});
+					const signature = await signMessageAsync({
+						message: response.messageToSign,
+					});
 
-						const signInResource = UserSignInRequestResource.hydrate<UserSignInRequestResource>({
-							address: walletAddress,
-							signature,
-						});
-						return signIn(signInResource);
-					} catch (error) {
-						console.error("Error signing message:", error);
-						disconnect();
-					}
+					console.log("Signature received:", signature);
+
+					const signInResource = UserSignInRequestResource.hydrate<UserSignInRequestResource>({
+						address: walletAddress,
+						signature,
+					});
+
+					console.log("signInResource:", signInResource);
+
+					return signIn(signInResource);
 				})
 				.catch((error) => {
 					console.error("Error during preSign:", error);
 					disconnect();
 				});
 		}
-	}, [address, isConnected, isReconnecting, isConnecting, signMessageAsync, jwtContent, disconnect]);
+	}, [address, isConnected, signMessageAsync, jwtContent, disconnect, connector, isDisconnected]);
+
+	useEffect(() => {
+		if (isSignError && signError) {
+			console.error("Sign message error:", signError);
+		}
+	}, [isSignError, signError]);
 
 	// When the jwt pair changes, we update the cookies
 	useEffect(() => {
@@ -118,21 +124,6 @@ export function AuthProvider(props: IProps) {
 		};
 	}, []);
 
-	const preSign = useCallback((...args: Parameters<AuthService["preSign"]>) => {
-		setIsLoading(true);
-		return authService.preSign(...args).finally(() => setIsLoading(false));
-	}, []);
-
-	const signIn = useCallback((...args: Parameters<AuthService["signIn"]>) => {
-		setIsLoading(true);
-		return authService.signIn(...args).finally(() => setIsLoading(false));
-	}, []);
-
-	const logout = useCallback((...args: Parameters<AuthService["logout"]>) => {
-		setIsLoading(true);
-		return authService.logout(...args).finally(() => setIsLoading(false));
-	}, []);
-
 	return (
 		<AuthContext.Provider
 			value={{
@@ -146,4 +137,20 @@ export function AuthProvider(props: IProps) {
 			{props.children}
 		</AuthContext.Provider>
 	);
+}
+
+function getJwtFromString(jwtString: string | null) {
+	// If the jwt string is empty, we set the jwt content to null
+	if (!jwtString) return null;
+	try {
+		const jwtPair = JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtString));
+		const jwtPayload = jwtDecode<{ user: UserJwtResource }>(jwtPair.accessToken);
+
+		if (!jwtPayload || typeof jwtPayload === "string") return null;
+
+		return UserJwtResource.hydrate<UserJwtResource>(jwtPayload.user);
+	} catch (error) {
+		console.error(error);
+		return null;
+	}
 }
