@@ -1,5 +1,6 @@
 import "reflect-metadata";
 
+
 import { Navbar } from "@/components/molecules/navbar";
 
 export default function Home() {

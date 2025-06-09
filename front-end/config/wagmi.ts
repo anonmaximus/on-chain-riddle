@@ -16,6 +16,6 @@ export const wagmiConfig = createConfig(
 		appDescription: "On Chain Riddle is a decentralized platform that allows users to solve riddles on the blockchain.",
 		appUrl: "http://localhost:3002",
 
-		connectors: [metaMask(), coinbaseWallet({ appName: "On Chain Riddle" }), walletConnect({ projectId: walletConnectProjectId })],
+		connectors: [metaMask(), coinbaseWallet({ appName: "On Chain Riddle" })],
 	}),
 );

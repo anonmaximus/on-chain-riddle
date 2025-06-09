@@ -1,9 +1,15 @@
+import "reflect-metadata";
+
 import { fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import clsx from "clsx";
 import { Metadata, Viewport } from "next";
 
 import { Providers } from "../providers/HeroUiProvider";
+
+import AppWalletProvider from "@/providers/AppWalletProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { UserProvider } from "@/providers/UserProvider";
 
 import "@/styles/globals.css";
 
@@ -30,9 +36,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 		<html suppressHydrationWarning lang="en">
 			<head />
 			<body className={clsx("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
-				<Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-					<main>{children}</main>
-				</Providers>
+				<AppWalletProvider>
+					<Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+						<AuthProvider>
+							<UserProvider>
+								<main>{children}</main>
+							</UserProvider>
+						</AuthProvider>
+					</Providers>
+				</AppWalletProvider>
 			</body>
 		</html>
 	);

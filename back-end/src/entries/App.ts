@@ -73,7 +73,7 @@ import http from "http";
 		res.sendFile(path.join(publicDir, "index.html"));
 	});
 
-	// Create HTTP server for both Express and WebSockets
+	// Create HTTP server for both Express
 	const server = http.createServer(router);
 
 	// Start HTTP server
@@ -90,12 +90,6 @@ import http from "http";
 					"Entry label": "NextJs Service",
 					Port: variables.NEXTJS_PORT,
 					host: variables.NEXTJS_HOST,
-					"Root url": "/",
-				},
-				{
-					"Entry label": "WebSocket Service",
-					Port: port,
-					host: "external",
 					"Root url": "/",
 				},
 			],

@@ -1,5 +1,7 @@
 "use client";
 
+import "reflect-metadata";
+
 import AuthService from "@/services/AuthService";
 import CookieService from "@/services/CookieService";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
