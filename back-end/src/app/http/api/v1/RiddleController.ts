@@ -1,27 +1,27 @@
-import express, { Router, Response, Request } from "express";
-import { container } from "tsyringe";
+import { ERuleName } from "@prisma/client";
 import ApiResponses from "#App/http/api/ApiResponses";
-import RequireJwtAuthentication, { HttpRequestContextAuth } from "#App/http/middlewares/RequireJwtAuthentication";
 import RequireBodyValidation from "#App/http/middlewares/RequireBodyValidation";
+import RequireJwtAuthentication, { HttpRequestContextAuth } from "#App/http/middlewares/RequireJwtAuthentication";
 import RequireRules from "#App/http/middlewares/RequireRules";
-import OnParamsTypes from "#App/http/middlewares/OnParamsTypes";
 import RiddleService from "#Services/RiddleService";
 import WebSocketService from "#Services/WebSocketService";
 import RiddleResponseResource from "common/resources/Riddle/RiddleResponseResource";
 import RiddleStatsResponseResource from "common/resources/Riddle/RiddleStatsResponseResource";
 import SubmitAnswerRequestResource from "common/resources/Riddle/SubmitAnswerRequestResource";
 import SubmitAnswerResponseResource from "common/resources/Riddle/SubmitAnswerResponseResource";
-import { ERuleName } from "@prisma/client";
+import express, { Request, Response, Router } from "express";
+import { container } from "tsyringe";
 
 export default (superRouter: Router) => {
 	const riddleService = container.resolve(RiddleService);
+
 	const webSocketService = container.resolve(WebSocketService);
 
 	const router = express.Router({ mergeParams: true });
 	superRouter.use(`/riddles`, router);
 
 	/**
-	 * @description Get the current active riddle
+	 * @description Get the current riddle
 	 */
 	router.get(`/current`, async (_req, res: Response<RiddleResponseResource>) => {
 		try {
@@ -35,7 +35,6 @@ export default (superRouter: Router) => {
 				res,
 				RiddleResponseResource.hydrate<RiddleResponseResource>({
 					id: riddle.id,
-					riddleId: riddle.riddleId,
 					question: riddle.question,
 					isActive: riddle.isActive,
 					solvedBy: riddle.solvedBy,
@@ -65,7 +64,6 @@ export default (superRouter: Router) => {
 				RiddleResponseResource.hydrateArray<RiddleResponseResource>(
 					riddles.map((r) => ({
 						id: r.id,
-						riddleId: r.riddleId,
 						question: r.question,
 						isActive: r.isActive,
 						solvedBy: r.solvedBy,
@@ -80,36 +78,7 @@ export default (superRouter: Router) => {
 	});
 
 	/**
-	 * @description Get a riddle by its ID
-	 */
-	router.get(`/:riddleId`, OnParamsTypes({ riddleId: "isNumber" }), async (req: Request<{ riddleId: string }>, res: Response<RiddleResponseResource>) => {
-		try {
-			const riddleId = parseInt(req.params.riddleId);
-			const riddle = await riddleService.getRiddleById(riddleId);
-
-			if (!riddle) {
-				return ApiResponses.httpNotFound(res, "Riddle not found");
-			}
-
-			return ApiResponses.httpSuccess(
-				res,
-				RiddleResponseResource.hydrate<RiddleResponseResource>({
-					id: riddle.id,
-					riddleId: riddle.riddleId,
-					question: riddle.question,
-					isActive: riddle.isActive,
-					solvedBy: riddle.solvedBy,
-					solvedAt: riddle.solvedAt,
-					createdAt: riddle.createdAt,
-				}),
-			);
-		} catch (error) {
-			return ApiResponses.httpInternalError(res, error);
-		}
-	});
-
-	/**
-	 * @description Submit an answer to the current riddle
+	 * @description Submits an answer to the current riddle
 	 */
 	router.post(
 		`/submit-answer`,
@@ -154,27 +123,14 @@ export default (superRouter: Router) => {
 			const userAddress = req.context!.authenticatedUser.address;
 			const solvedRiddles = await riddleService.getUserSolvedRiddles(userAddress);
 
-			return ApiResponses.httpSuccess(
-				res,
-				RiddleResponseResource.hydrateArray<RiddleResponseResource>(
-					solvedRiddles.map((r) => ({
-						id: r.id,
-						riddleId: r.riddleId,
-						question: r.question,
-						isActive: r.isActive,
-						solvedBy: r.solvedBy,
-						solvedAt: r.solvedAt,
-						createdAt: r.createdAt,
-					})),
-				),
-			);
+			return ApiResponses.httpSuccess(res, RiddleResponseResource.hydrateArray<RiddleResponseResource>(solvedRiddles));
 		} catch (error) {
 			return ApiResponses.httpInternalError(res, error);
 		}
 	});
 
 	/**
-	 * @description Get statistics about riddles
+	 * @description Get riddle statistics
 	 */
 	router.get(`/stats`, async (_req, res: Response<RiddleStatsResponseResource>) => {
 		try {
@@ -187,7 +143,7 @@ export default (superRouter: Router) => {
 	});
 
 	/**
-	 * @description Verify if the authenticated user can submit an answer to the current riddle
+	 * @description Verifies if the user can submit an answer to the current riddle
 	 */
 	router.get(`/can-submit`, RequireJwtAuthentication(), async (req: HttpRequestContextAuth, res) => {
 		try {

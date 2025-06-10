@@ -2,13 +2,13 @@ import logger from "#Services/Logger";
 import { ethers } from "ethers";
 import { singleton } from "tsyringe";
 
-import ContractService from "./ContractService";
+import ContractService from "./contract/ContractService";
 import RiddleService from "./RiddleService";
 import WebSocketService from "./WebSocketService";
 
 interface RiddleToPublish {
 	question: string;
-	answer?: string;
+	answer: string; // Required now for hashing
 }
 
 @singleton()
@@ -36,9 +36,7 @@ export default class RiddleIndexerService {
 		logger.info("Starting RiddleIndexer...");
 
 		await this.loadRiddlesToPublish();
-
 		await this.syncInitialState();
-
 		this.setupEventListeners();
 
 		const balance = await this.contractService.getBotBalance();
@@ -62,35 +60,18 @@ export default class RiddleIndexerService {
 	}
 
 	/**
-	 * Force the publication of the next riddle (for development purposes only)
-	 */
-	public async forcePublishNextRiddle() {
-		return this.publishNextRiddle();
-	}
-
-	/**
-	 * Get the current status of the RiddleIndexer
-	 */
-	public getStatus() {
-		return {
-			isListening: this.isListening,
-			totalRiddles: this.riddlesToPublish.length,
-			currentIndex: this.currentRiddleIndex,
-			botAddress: this.contractService.getBotAddress(),
-		};
-	}
-
-	/**
-	 * Configure les listeners d'événements
+	 * Configure event listeners
 	 */
 	private setupEventListeners() {
-		this.contractService.onRiddlePublished(async (riddleId, riddle, event) => {
+		this.contractService.onRiddleSet(async (riddle, event) => {
 			try {
-				logger.info(`Processing RiddlePublished event: ID ${riddleId}`);
+				logger.info(`Processing RiddleSet event: ${riddle}`);
 
-				await this.riddleService.upsertRiddle({
-					riddleId,
+				const riddleData = this.riddlesToPublish.find((r) => r.question === riddle);
+
+				await this.riddleService.createRiddle({
 					question: riddle,
+					answer: riddleData?.answer, // Store answer for reference
 					isActive: true,
 					blockNumber: event.blockNumber,
 					txHash: event.transactionHash,
@@ -99,27 +80,24 @@ export default class RiddleIndexerService {
 				this.webSocketService.broadcast({
 					type: "RIDDLE_PUBLISHED",
 					data: {
-						riddleId,
 						question: riddle,
 						blockNumber: event.blockNumber,
 						txHash: event.transactionHash,
 					},
 				});
 
-				logger.info(`Riddle ${riddleId} indexed successfully`);
+				logger.info(`Riddle indexed successfully`);
 			} catch (error) {
-				logger.error(`Error processing RiddlePublished event:`, error);
+				logger.error(`Error processing RiddleSet event:`, error);
 			}
 		});
 
-		this.contractService.onRiddleSolved(async (riddleId, solver, answer, event) => {
+		this.contractService.onWinner(async (winner, event) => {
 			try {
-				logger.info(`Processing RiddleSolved event: ID ${riddleId} by ${solver}`);
+				logger.info(`Processing Winner event: ${winner}`);
 
-				await this.riddleService.markRiddleAsSolved({
-					riddleId,
-					solvedBy: solver,
-					answer,
+				await this.riddleService.markCurrentRiddleAsSolved({
+					solvedBy: winner,
 					blockNumber: event.blockNumber,
 					txHash: event.transactionHash,
 				});
@@ -127,25 +105,34 @@ export default class RiddleIndexerService {
 				this.webSocketService.broadcast({
 					type: "RIDDLE_SOLVED",
 					data: {
-						riddleId,
-						solver,
-						answer,
+						solver: winner,
 						blockNumber: event.blockNumber,
 						txHash: event.transactionHash,
 					},
 				});
 
-				logger.info(`Riddle ${riddleId} marked as solved`);
+				logger.info(`Riddle marked as solved`);
 
 				await this.publishNextRiddle();
 			} catch (error) {
-				logger.error(`Error processing RiddleSolved event:`, error);
+				logger.error(`Error processing Winner event:`, error);
+			}
+		});
+
+		this.contractService.onAnswerAttempt(async (user, correct, event) => {
+			try {
+				this.webSocketService.notifySubmissionStatus(user, correct ? "success" : "failed", {
+					message: correct ? "Congratulations! You solved the riddle!" : "Wrong answer, try again!",
+					transactionHash: event.transactionHash,
+				});
+			} catch (error) {
+				logger.error(`Error processing AnswerAttempt event:`, error);
 			}
 		});
 	}
 
 	/**
-	 * Synchronise l'état initial depuis la blockchain
+	 * Synchronize initial state from blockchain
 	 */
 	private async syncInitialState() {
 		try {
@@ -153,24 +140,12 @@ export default class RiddleIndexerService {
 
 			const currentRiddle = await this.contractService.getCurrentRiddle();
 
-			if (currentRiddle.id === 0 && currentRiddle.riddle === "") {
+			if (!currentRiddle.riddle || currentRiddle.riddle === "") {
 				logger.info("No riddle found on blockchain, publishing first riddle...");
 				await this.publishNextRiddle();
-			} else {
-				const details = await this.contractService.getRiddleDetails(currentRiddle.id);
-
-				await this.riddleService.upsertRiddle({
-					riddleId: currentRiddle.id,
-					question: currentRiddle.riddle,
-					isActive: currentRiddle.isActive,
-					blockNumber: 0, // not available without scanning past events
-					txHash: "0x", // not available without scanning past events
-				});
-
-				if (!currentRiddle.isActive && details.solver !== ethers.ZeroAddress) {
-					logger.info("Current riddle is solved, publishing next one...");
-					await this.publishNextRiddle();
-				}
+			} else if (!currentRiddle.isActive && currentRiddle.winner !== ethers.ZeroAddress) {
+				logger.info("Current riddle is solved, publishing next one...");
+				await this.publishNextRiddle();
 			}
 
 			logger.info("Initial sync completed");
@@ -180,7 +155,8 @@ export default class RiddleIndexerService {
 	}
 
 	/**
-	 * Loads riddles to publish from hardcoded list // Todo: replace with dynamic loading from a file or database
+	 * Load riddles to publish
+	 * It is hardcoded for now, but can be replaced with a database or external source in the future
 	 */
 	private async loadRiddlesToPublish() {
 		this.riddlesToPublish = [
@@ -205,10 +181,12 @@ export default class RiddleIndexerService {
 				answer: "map",
 			},
 		];
+
+		logger.info(`Loaded ${this.riddlesToPublish.length} riddles to publish`);
 	}
 
 	/**
-	 * Publishes the next riddle in the list
+	 * Publish the next riddle
 	 */
 	private async publishNextRiddle() {
 		try {
@@ -225,9 +203,9 @@ export default class RiddleIndexerService {
 
 			logger.info(`Publishing riddle ${this.currentRiddleIndex}/${this.riddlesToPublish.length}: ${riddle.question}`);
 
-			const { riddleId, txHash } = await this.contractService.setRiddle(riddle.question);
+			const { txHash } = await this.contractService.setRiddle(riddle.question, riddle.answer);
 
-			logger.info(`Riddle published successfully: ID ${riddleId}, TX ${txHash}`);
+			logger.info(`Riddle published successfully: TX ${txHash}`);
 
 			this.webSocketService.broadcast({
 				type: "RIDDLE_PUBLISHING",
@@ -244,5 +222,17 @@ export default class RiddleIndexerService {
 				this.publishNextRiddle().catch(logger.error);
 			}, 30000);
 		}
+	}
+
+	/**
+	 * Get indexer status
+	 */
+	public getStatus() {
+		return {
+			isListening: this.isListening,
+			totalRiddles: this.riddlesToPublish.length,
+			currentIndex: this.currentRiddleIndex,
+			botAddress: this.contractService.getBotAddress(),
+		};
 	}
 }

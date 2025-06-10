@@ -14,10 +14,6 @@ export default class RiddleService {
 		return this.api.getAllRiddles(skip, take);
 	}
 
-	public getRiddleById(riddleId: number) {
-		return this.api.getRiddleById(riddleId);
-	}
-
 	public submitAnswer(transactionHash: string) {
 		const resource = SubmitAnswerRequestResource.hydrate<SubmitAnswerRequestResource>({
 			transactionHash,

@@ -19,11 +19,6 @@ export class RiddleApi extends BaseApi {
 		return this.getRequest<RiddleResponseResource[]>(url);
 	}
 
-	public async getRiddleById(riddleId: number) {
-		const url = `${this.baseurl}/${riddleId}`;
-		return this.getRequest<RiddleResponseResource>(url);
-	}
-
 	public async submitAnswer(data: SubmitAnswerRequestResource) {
 		const url = `${this.baseurl}/submit-answer`;
 		return this.postRequest<SubmitAnswerResponseResource>(url, { ...data });

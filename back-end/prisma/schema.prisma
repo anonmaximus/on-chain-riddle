@@ -82,9 +82,8 @@ model Rule {
 model Riddle {
     id String @id @unique @default(uuid()) @db.Uuid()
 
-    riddleId    Int       @unique @map("riddle_id")
     question    String
-    answer      String? // Stocké chiffré ou hashé pour sécurité
+    answer      String? // Stocké for reference, not used for validation
     isActive    Boolean   @default(true) @map("is_active")
     solvedBy    String?   @map("solved_by") @db.VarChar(255)
     solvedAt    DateTime? @map("solved_at")
