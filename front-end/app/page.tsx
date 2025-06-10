@@ -58,7 +58,7 @@ export function RiddlePage() {
 						<div className="space-y-6 mt-6">
 							<RiddleDisplay riddle={currentRiddle} isLoading={isLoading} error={error} />
 
-							{currentRiddle?.isActive && <AnswerForm canSubmit={canSubmit}  />}
+							{currentRiddle?.isActive && <AnswerForm canSubmit={canSubmit} />}
 						</div>
 					</Tab>
 
@@ -72,10 +72,10 @@ export function RiddlePage() {
 											</CardBody>
 										</Card>
 									))
-								: allRiddles.map((riddle) => (
+								: allRiddles.map((riddle, index) => (
 										<Card key={riddle.id}>
 											<CardHeader className="flex justify-between">
-												<span className="font-semibold">Riddle #{riddle.riddleId}</span>
+												<span className="font-semibold">Riddle #{index + 1}</span>
 												<Chip size="sm" color={riddle.isActive ? "success" : "default"} variant="flat">
 													{riddle.isActive ? "Active" : "Solved"}
 												</Chip>
@@ -85,6 +85,11 @@ export function RiddlePage() {
 												{riddle.solvedBy && (
 													<p className="text-sm text-default-500">
 														Solved by: {riddle.solvedBy.slice(0, 6)}...{riddle.solvedBy.slice(-4)}
+													</p>
+												)}
+												{riddle.solvedAt && (
+													<p className="text-sm text-default-500">
+														Solved at: {new Date(riddle.solvedAt).toLocaleString()}
 													</p>
 												)}
 											</CardBody>

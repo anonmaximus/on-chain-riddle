@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { container } from "tsyringe";
 import RiddleService from "@/services/RiddleService";
 import WebSocketService from "@/services/WebSocketService";
-import RiddleResponseResource from "common/resources/Riddle/RiddleResponseResource";
 import logger from "@/utils/logger";
+import RiddleResponseResource from "common/resources/Riddle/RiddleResponseResource";
+import { useCallback, useEffect, useState } from "react";
+import { container } from "tsyringe";
 
 interface UseRiddleResult {
 	currentRiddle: RiddleResponseResource | null;
@@ -62,29 +62,36 @@ export function useRiddle(): UseRiddleResult {
 		const unsubscribeSolved = webSocketService.on("RIDDLE_SOLVED", (message) => {
 			logger.info("Riddle solved:", message.data);
 
-			if (currentRiddle && currentRiddle.riddleId === message.data.riddleId) {
-				const resource = RiddleResponseResource.hydrate<RiddleResponseResource>({
+			if (currentRiddle && currentRiddle.isActive) {
+				const updatedRiddle = RiddleResponseResource.hydrate<RiddleResponseResource>({
 					...currentRiddle,
 					isActive: false,
 					solvedBy: message.data.solver,
 					solvedAt: new Date(),
 				});
 
-				setCurrentRiddle(resource);
+				setCurrentRiddle(updatedRiddle);
 				setCanSubmit(false);
 			}
 		});
 
-		if (currentRiddle) {
-			webSocketService.subscribeToRiddle(currentRiddle.riddleId);
-		}
+		const unsubscribePublishing = webSocketService.on("RIDDLE_PUBLISHING", (message) => {
+			logger.info("Riddle being published:", message.data);
+		});
+
+		const unsubscribeSubmission = webSocketService.on("USER_SUBMISSION_UPDATE", (message) => {
+			logger.info("User submission update:", message.data);
+			if (message.data.status === "success") {
+				fetchCurrentRiddle();
+				checkCanSubmit();
+			}
+		});
 
 		return () => {
 			unsubscribePublished();
 			unsubscribeSolved();
-			if (currentRiddle) {
-				webSocketService.unsubscribeFromRiddle(currentRiddle.riddleId);
-			}
+			unsubscribePublishing();
+			unsubscribeSubmission();
 		};
 	}, [currentRiddle, webSocketService, fetchCurrentRiddle, checkCanSubmit]);
 

@@ -99,29 +99,6 @@ export default class WebSocketService {
 	}
 
 	/**
-	 * Subscribe to updates for a specific riddle
-	 */
-	public subscribeToRiddle(riddleId: number) {
-		if (!this.socket?.connected) {
-			logger.warn("Cannot subscribe to riddle: WebSocket not connected");
-			return;
-		}
-
-		this.socket.emit("subscribe:riddle", riddleId);
-		logger.debug("Subscribed to riddle:", riddleId);
-	}
-
-	/**
-	 * Unsubscribe from updates for a specific riddle
-	 */
-	public unsubscribeFromRiddle(riddleId: number) {
-		if (!this.socket?.connected) return;
-
-		this.socket.emit("unsubscribe:riddle", riddleId);
-		logger.debug("Unsubscribed from riddle:", riddleId);
-	}
-
-	/**
 	 * Registers an event handler
 	 */
 	public on(eventType: WebSocketMessage["type"], handler: WebSocketEventHandler): () => void {

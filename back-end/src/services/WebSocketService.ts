@@ -101,15 +101,12 @@ export default class WebSocketService {
 				socket.emit("pong", { timestamp: Date.now() });
 			});
 
-			socket.on("subscribe:riddle", (riddleId: number) => {
-				socket.join(`riddle:${riddleId}`);
-				logger.debug(`Client ${userId} subscribed to riddle ${riddleId}`);
-			});
-
-			// Événement pour se désabonner
-			socket.on("unsubscribe:riddle", (riddleId: number) => {
-				socket.leave(`riddle:${riddleId}`);
-				logger.debug(`Client ${userId} unsubscribed from riddle ${riddleId}`);
+			socket.on("health", () => {
+				socket.emit("health_response", {
+					status: "ok",
+					timestamp: Date.now(),
+					connectedClients: this.connectedClients.size,
+				});
 			});
 		});
 	}
@@ -148,24 +145,6 @@ export default class WebSocketService {
 
 		this.io.to(`user:${userAddress.toLowerCase()}`).emit("update", messageWithTimestamp);
 		logger.debug(`Sent message to user ${userAddress}: ${message.type}`);
-	}
-
-	/**
-	 * Send a message to all subscribers of a specific riddle
-	 */
-	public sendToRiddleSubscribers(riddleId: number, message: WebSocketMessage) {
-		if (!this.io) {
-			logger.warn("WebSocket server not initialized");
-			return;
-		}
-
-		const messageWithTimestamp = {
-			...message,
-			timestamp: message.timestamp || Date.now(),
-		};
-
-		this.io.to(`riddle:${riddleId}`).emit("update", messageWithTimestamp);
-		logger.debug(`Sent message to riddle ${riddleId} subscribers: ${message.type}`);
 	}
 
 	/**

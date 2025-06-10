@@ -10,6 +10,7 @@ interface IProps {
 
 export function RiddleDisplay(props: IProps) {
 	const { riddle, isLoading, error } = props;
+	
 	if (isLoading) {
 		return (
 			<Card className="w-full max-w-2xl mx-auto">
@@ -47,7 +48,7 @@ export function RiddleDisplay(props: IProps) {
 		<Card className="w-full max-w-2xl mx-auto">
 			<CardHeader className="flex justify-between items-center">
 				<div className="flex gap-3 items-center">
-					<h2 className="text-xl font-bold">Riddle #{riddle.riddleId}</h2>
+					<h2 className="text-xl font-bold">Riddle</h2>
 					<Chip color={riddle.isActive ? "success" : "default"} variant="flat" size="sm">
 						{riddle.isActive ? "Active" : "Solved"}
 					</Chip>
