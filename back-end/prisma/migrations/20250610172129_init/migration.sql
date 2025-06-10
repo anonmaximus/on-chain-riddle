@@ -63,6 +63,22 @@ CREATE TABLE "rules" (
 );
 
 -- CreateTable
+CREATE TABLE "riddles" (
+    "id" UUID NOT NULL,
+    "question" TEXT NOT NULL,
+    "answer" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "solved_by" VARCHAR(255),
+    "solved_at" TIMESTAMP(3),
+    "block_number" INTEGER NOT NULL,
+    "tx_hash" VARCHAR(255) NOT NULL,
+    "created_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3),
+
+    CONSTRAINT "riddles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_RoleToRule" (
     "A" UUID NOT NULL,
     "B" UUID NOT NULL,
@@ -102,6 +118,15 @@ CREATE UNIQUE INDEX "rules_id_key" ON "rules"("id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "rules_name_key" ON "rules"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "riddles_id_key" ON "riddles"("id");
+
+-- CreateIndex
+CREATE INDEX "riddles_is_active_idx" ON "riddles"("is_active");
+
+-- CreateIndex
+CREATE INDEX "riddles_solved_by_idx" ON "riddles"("solved_by");
 
 -- CreateIndex
 CREATE INDEX "_RoleToRule_B_index" ON "_RoleToRule"("B");

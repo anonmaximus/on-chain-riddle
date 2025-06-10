@@ -15,7 +15,6 @@ interface RiddleToPublish {
 export default class RiddleIndexerService {
 	private isListening = false;
 	private riddlesToPublish: RiddleToPublish[] = [];
-	private currentRiddleIndex = 0;
 
 	constructor(
 		private contractService: ContractService,
@@ -67,14 +66,11 @@ export default class RiddleIndexerService {
 			try {
 				logger.info(`Processing RiddleSet event: ${riddle}`);
 
-				const riddleData = this.riddlesToPublish.find((r) => r.question === riddle);
-
 				await this.riddleService.createRiddle({
 					question: riddle,
-					answer: riddleData?.answer, // Store answer for reference
 					isActive: true,
-					blockNumber: event.blockNumber,
-					txHash: event.transactionHash,
+					blockNumber: event.blockNumber || 0,
+					txHash: event.transactionHash || "0x",
 				});
 
 				this.webSocketService.broadcast({
@@ -96,10 +92,15 @@ export default class RiddleIndexerService {
 			try {
 				logger.info(`Processing Winner event: ${winner}`);
 
+				const currentRiddle = await this.riddleService.getCurrentRiddle();
+
+				const answer = this.riddlesToPublish.find((r) => r.question === currentRiddle?.question)?.answer || "";
+
 				await this.riddleService.markCurrentRiddleAsSolved({
 					solvedBy: winner,
 					blockNumber: event.blockNumber,
 					txHash: event.transactionHash,
+					answer,
 				});
 
 				this.webSocketService.broadcast({
@@ -198,10 +199,13 @@ export default class RiddleIndexerService {
 				return;
 			}
 
-			const riddle = this.riddlesToPublish[this.currentRiddleIndex]!;
-			this.currentRiddleIndex = (this.currentRiddleIndex + 1) % this.riddlesToPublish.length;
+			const currentRiddle = await this.riddleService.getCurrentRiddle();
+			const currentRiddleIndex = currentRiddle?.index ?? 0;
 
-			logger.info(`Publishing riddle ${this.currentRiddleIndex}/${this.riddlesToPublish.length}: ${riddle.question}`);
+			const nextRiddleIndex = (currentRiddleIndex + 1) % this.riddlesToPublish.length;
+			const riddle = this.riddlesToPublish[nextRiddleIndex]!;
+
+			logger.info(`Publishing riddle ${nextRiddleIndex}/${this.riddlesToPublish.length}: ${riddle.question}`);
 
 			const { txHash } = await this.contractService.setRiddle(riddle.question, riddle.answer);
 
@@ -222,17 +226,5 @@ export default class RiddleIndexerService {
 				this.publishNextRiddle().catch(logger.error);
 			}, 30000);
 		}
-	}
-
-	/**
-	 * Get indexer status
-	 */
-	public getStatus() {
-		return {
-			isListening: this.isListening,
-			totalRiddles: this.riddlesToPublish.length,
-			currentIndex: this.currentRiddleIndex,
-			botAddress: this.contractService.getBotAddress(),
-		};
 	}
 }

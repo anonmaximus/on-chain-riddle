@@ -37,7 +37,7 @@ export function AuthProvider(props: IProps) {
 	const [jwtContent, setJwtContent] = useState<UserJwtResource | null>(getJwtFromString(jwtPairString));
 	const [jwtPair, setJwtPair] = useState<JwtPairResource | null>(jwtPairString ? JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtPairString)) : null);
 
-	const { address, isConnected, connector, isDisconnected } = useAccount();
+	const { address, isConnected, connector, isDisconnected, status} = useAccount();
 	const { signMessageAsync, isError: isSignError, error: signError } = useSignMessage();
 	const { disconnect } = useDisconnect();
 
@@ -51,8 +51,9 @@ export function AuthProvider(props: IProps) {
 		return authService.signIn(...args).finally(() => setIsLoading(false));
 	}, []);
 
-	const logout = useCallback((...args: Parameters<AuthService["logout"]>) => {
+	const logout = useCallback(async (...args: Parameters<AuthService["logout"]>) => {
 		setIsLoading(true);
+		disconnect();
 		return authService.logout(...args).finally(() => setIsLoading(false));
 	}, []);
 
@@ -93,7 +94,7 @@ export function AuthProvider(props: IProps) {
 					disconnect();
 				});
 		}
-	}, [address, isConnected, signMessageAsync, jwtContent, disconnect, connector, isDisconnected]);
+	}, [address, isConnected, signMessageAsync, jwtContent, disconnect, connector, isDisconnected, status]);
 
 	useEffect(() => {
 		if (isSignError && signError) {

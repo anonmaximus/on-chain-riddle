@@ -1,9 +1,11 @@
+import { UserContext } from "@/providers/UserProvider";
 import RiddleService from "@/services/RiddleService";
 import WebSocketService from "@/services/WebSocketService";
 import logger from "@/utils/logger";
 import RiddleResponseResource from "common/resources/Riddle/RiddleResponseResource";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { container } from "tsyringe";
+import { useAccount } from "wagmi";
 
 interface UseRiddleResult {
 	currentRiddle: RiddleResponseResource | null;
@@ -19,6 +21,8 @@ export function useRiddle(): UseRiddleResult {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<Error | null>(null);
 	const [canSubmit, setCanSubmit] = useState(false);
+	const user = useContext(UserContext);
+	const { isConnected } = useAccount();
 
 	const riddleService = container.resolve(RiddleService);
 	const webSocketService = container.resolve(WebSocketService);
@@ -39,13 +43,17 @@ export function useRiddle(): UseRiddleResult {
 
 	const checkCanSubmit = useCallback(async () => {
 		try {
+			if (!user || !isConnected) {
+				setCanSubmit(false);
+				return;
+			}
 			const result = await riddleService.canSubmit();
 			setCanSubmit(result.canSubmit);
 		} catch (err) {
 			logger.error("Error checking can submit:", err);
 			setCanSubmit(false);
 		}
-	}, [riddleService]);
+	}, [riddleService, user]);
 
 	useEffect(() => {
 		fetchCurrentRiddle();

@@ -10,6 +10,9 @@ export default class RiddleResponseResource extends Resource {
 	public question!: string;
 
 	@Expose()
+	public answer?: string | null;
+
+	@Expose()
 	public isActive!: boolean;
 
 	@Expose()

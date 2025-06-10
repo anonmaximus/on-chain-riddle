@@ -82,6 +82,7 @@ model Rule {
 model Riddle {
     id String @id @unique @default(uuid()) @db.Uuid()
 
+    index       Int       @default(autoincrement()) @map("index")
     question    String
     answer      String? // Stocké for reference, not used for validation
     isActive    Boolean   @default(true) @map("is_active")
@@ -95,6 +96,7 @@ model Riddle {
 
     @@index([isActive])
     @@index([solvedBy])
+    @@index([index])
     @@map("riddles")
 }
 

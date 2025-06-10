@@ -26,12 +26,6 @@ export function AnswerForm(props: IProps) {
 		} catch (err) {}
 	};
 
-	const handleKeyPress = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter" && !isSubmitting && !isConfirming) {
-			handleSubmit();
-		}
-	};
-
 	// Check if user has the required rule
 	const hasSubmitRule = user?.role.rules.some((rule) => rule.name === "submit_riddle_answer");
 
@@ -70,7 +64,6 @@ export function AnswerForm(props: IProps) {
 						placeholder="Enter your answer..."
 						value={answer}
 						onChange={(e) => setAnswer(e.target.value)}
-						onKeyPress={handleKeyPress}
 						isDisabled={isSubmitting || isConfirming}
 						variant="bordered"
 						size="lg"
