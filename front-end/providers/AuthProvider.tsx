@@ -37,7 +37,7 @@ export function AuthProvider(props: IProps) {
 	const [jwtContent, setJwtContent] = useState<UserJwtResource | null>(getJwtFromString(jwtPairString));
 	const [jwtPair, setJwtPair] = useState<JwtPairResource | null>(jwtPairString ? JwtPairResource.hydrate<JwtPairResource>(JSON.parse(jwtPairString)) : null);
 
-	const { address, isConnected, isReconnecting, isConnecting, connector, status, chain, isDisconnected } = useAccount();
+	const { address, isConnected, connector, isDisconnected } = useAccount();
 	const { signMessageAsync, isError: isSignError, error: signError } = useSignMessage();
 	const { disconnect } = useDisconnect();
 
