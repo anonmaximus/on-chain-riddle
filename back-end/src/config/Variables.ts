@@ -38,6 +38,20 @@ export class Variables {
 	@IsEnum(["development", "staging", "production"])
 	public readonly APP_ENV: "development" | "staging" | "production" = process.env["APP_ENV"]! as typeof this.APP_ENV;
 
+    @IsNotEmpty()
+    public readonly BLOCKCHAIN_RPC_URL: string = process.env["BLOCKCHAIN_RPC_URL"]!;
+
+    @IsNotEmpty()
+    public readonly CONTRACT_ADDRESS: string = process.env["CONTRACT_ADDRESS"]!;
+
+    @IsNotEmpty()
+    public readonly BOT_PRIVATE_KEY: string = process.env["BOT_PRIVATE_KEY"]!;
+
+    @IsNumberString()
+    @IsNotEmpty()
+    public readonly WEBSOCKET_PORT: string = process.env["WEBSOCKET_PORT"]!;
+
+
 	public constructor() {}
 
 	public validate(groups: string[] = []) {
