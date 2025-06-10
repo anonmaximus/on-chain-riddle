@@ -6,8 +6,10 @@ import { singleton } from "tsyringe";
 
 import AuthService from "./AuthService";
 
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
+
 export interface WebSocketMessage {
-	type: "RIDDLE_PUBLISHED" | "RIDDLE_SOLVED" | "RIDDLE_PUBLISHING" | "USER_SUBMISSION_UPDATE";
+	type: EWebsocketMessageType;
 	data: any;
 	timestamp?: number;
 }
@@ -152,7 +154,7 @@ export default class WebSocketService {
 	 */
 	public notifySubmissionStatus(userAddress: string, status: "pending" | "success" | "failed", details?: any) {
 		this.sendToUser(userAddress, {
-			type: "USER_SUBMISSION_UPDATE",
+			type: EWebsocketMessageType.USER_SUBMISSION_UPDATE,
 			data: {
 				status,
 				...details,

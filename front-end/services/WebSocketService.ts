@@ -2,8 +2,10 @@ import logger from "@/utils/logger";
 import { io, Socket } from "socket.io-client";
 import { singleton } from "tsyringe";
 
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
+
 export interface WebSocketMessage {
-	type: "RIDDLE_PUBLISHED" | "RIDDLE_SOLVED" | "RIDDLE_PUBLISHING" | "USER_SUBMISSION_UPDATE";
+	type: EWebsocketMessageType;
 	data: any;
 	timestamp: number;
 }

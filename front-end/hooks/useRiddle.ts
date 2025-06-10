@@ -2,6 +2,7 @@ import { UserContext } from "@/providers/UserProvider";
 import RiddleService from "@/services/RiddleService";
 import WebSocketService from "@/services/WebSocketService";
 import logger from "@/utils/logger";
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
 import RiddleResponseResource from "common/resources/Riddle/RiddleResponseResource";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { container } from "tsyringe";
@@ -61,13 +62,13 @@ export function useRiddle(): UseRiddleResult {
 	}, [fetchCurrentRiddle, checkCanSubmit]);
 
 	useEffect(() => {
-		const unsubscribePublished = webSocketService.on("RIDDLE_PUBLISHED", (message) => {
+		const unsubscribePublished = webSocketService.on(EWebsocketMessageType.RIDDLE_PUBLISHED, (message) => {
 			logger.info("New riddle published:", message.data);
 			fetchCurrentRiddle();
 			checkCanSubmit();
 		});
 
-		const unsubscribeSolved = webSocketService.on("RIDDLE_SOLVED", (message) => {
+		const unsubscribeSolved = webSocketService.on(EWebsocketMessageType.RIDDLE_SOLVED, (message) => {
 			logger.info("Riddle solved:", message.data);
 
 			if (currentRiddle && currentRiddle.isActive) {
@@ -83,11 +84,11 @@ export function useRiddle(): UseRiddleResult {
 			}
 		});
 
-		const unsubscribePublishing = webSocketService.on("RIDDLE_PUBLISHING", (message) => {
+		const unsubscribePublishing = webSocketService.on(EWebsocketMessageType.RIDDLE_PUBLISHING, (message) => {
 			logger.info("Riddle being published:", message.data);
 		});
 
-		const unsubscribeSubmission = webSocketService.on("USER_SUBMISSION_UPDATE", (message) => {
+		const unsubscribeSubmission = webSocketService.on(EWebsocketMessageType.USER_SUBMISSION_UPDATE, (message) => {
 			logger.info("User submission update:", message.data);
 			if (message.data.status === "success") {
 				fetchCurrentRiddle();

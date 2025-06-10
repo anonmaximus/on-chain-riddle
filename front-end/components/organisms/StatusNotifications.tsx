@@ -1,6 +1,7 @@
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { WebSocketMessage } from "@/services/WebSocketService";
 import { Alert, Progress } from "@heroui/react";
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
 import React, { useEffect, useState } from "react";
 
 export function StatusNotifications() {
@@ -31,28 +32,28 @@ export function StatusNotifications() {
 
 	const getNotificationContent = (message: WebSocketMessage) => {
 		switch (message.type) {
-			case "RIDDLE_PUBLISHED":
+			case EWebsocketMessageType.RIDDLE_PUBLISHED:
 				return {
 					title: "New Riddle Published!",
 					description: `Riddle #${message.data.riddleId} is now available`,
 					color: "success" as const,
 				};
 
-			case "RIDDLE_SOLVED":
+			case EWebsocketMessageType.RIDDLE_SOLVED:
 				return {
 					title: "Riddle Solved!",
 					description: `Riddle #${message.data.riddleId} was solved by ${message.data.solver.slice(0, 6)}...${message.data.solver.slice(-4)}`,
 					color: "primary" as const,
 				};
 
-			case "RIDDLE_PUBLISHING":
+			case EWebsocketMessageType.RIDDLE_PUBLISHING:
 				return {
 					title: "Publishing New Riddle...",
 					description: message.data.message,
 					color: "warning" as const,
 				};
 
-			case "USER_SUBMISSION_UPDATE":
+			case EWebsocketMessageType.USER_SUBMISSION_UPDATE:
 				const statusColors = {
 					pending: "warning" as const,
 					success: "success" as const,

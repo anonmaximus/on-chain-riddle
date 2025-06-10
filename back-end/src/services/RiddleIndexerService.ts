@@ -5,6 +5,7 @@ import { singleton } from "tsyringe";
 import RiddleService from "./RiddleService";
 import WebSocketService from "./WebSocketService";
 import ContractService from "./ContractService";
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
 
 interface RiddleToPublish {
 	question: string;
@@ -74,7 +75,7 @@ export default class RiddleIndexerService {
 				});
 
 				this.webSocketService.broadcast({
-					type: "RIDDLE_PUBLISHED",
+					type: EWebsocketMessageType.RIDDLE_PUBLISHED,
 					data: {
 						question: riddle,
 						blockNumber: event.blockNumber,
@@ -104,7 +105,7 @@ export default class RiddleIndexerService {
 				});
 
 				this.webSocketService.broadcast({
-					type: "RIDDLE_SOLVED",
+					type:  EWebsocketMessageType.RIDDLE_SOLVED,
 					data: {
 						solver: winner,
 						blockNumber: event.blockNumber,
@@ -212,7 +213,7 @@ export default class RiddleIndexerService {
 			logger.info(`Riddle published successfully: TX ${txHash}`);
 
 			this.webSocketService.broadcast({
-				type: "RIDDLE_PUBLISHING",
+				type:  EWebsocketMessageType.RIDDLE_PUBLISHING,
 				data: {
 					message: "New riddle is being published...",
 					txHash,

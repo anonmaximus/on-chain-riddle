@@ -1,6 +1,7 @@
 import { AuthContext } from "@/providers/AuthProvider";
 import WebSocketService, { WebSocketMessage } from "@/services/WebSocketService";
 import logger from "@/utils/logger";
+import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
 import { useContext, useEffect, useState } from "react";
 import { container } from "tsyringe";
 
@@ -29,7 +30,12 @@ export function useWebSocket(): UseWebSocketResult {
 				await webSocketService.connect(jwtPair.accessToken);
 				setIsConnected(true);
 
-				const messageTypes: WebSocketMessage["type"][] = ["RIDDLE_PUBLISHED", "RIDDLE_SOLVED", "RIDDLE_PUBLISHING", "USER_SUBMISSION_UPDATE"];
+				const messageTypes: EWebsocketMessageType[] = [
+					EWebsocketMessageType.RIDDLE_PUBLISHED,
+					EWebsocketMessageType.RIDDLE_SOLVED,
+					EWebsocketMessageType.RIDDLE_PUBLISHING,
+					EWebsocketMessageType.USER_SUBMISSION_UPDATE,
+				];
 
 				const unsubscribers = messageTypes.map((type) =>
 					webSocketService.on(type, (message) => {
