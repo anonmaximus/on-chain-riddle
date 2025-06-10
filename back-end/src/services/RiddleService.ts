@@ -1,7 +1,8 @@
 import DbClient from "#Databases/DbClient";
 import logger from "#Services/Logger";
 import { singleton } from "tsyringe";
-import ContractService from "./contract/ContractService";
+import ContractService from "./ContractService";
+
 
 export interface CreateRiddleDto {
 	question: string;

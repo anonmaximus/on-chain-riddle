@@ -1,31 +1,9 @@
-import { useState, useCallback } from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { container } from "tsyringe";
 import RiddleService from "@/services/RiddleService";
 import logger from "@/utils/logger";
-
-// TODO: ABI du contrat OnchainRiddle (fonction submitAnswer uniquement)
-const RIDDLE_CONTRACT_ABI = [
-	{
-		inputs: [
-			{
-				internalType: "string",
-				name: "_answer",
-				type: "string",
-			},
-		],
-		name: "submitAnswer",
-		outputs: [
-			{
-				internalType: "bool",
-				name: "",
-				type: "bool",
-			},
-		],
-		stateMutability: "nonpayable",
-		type: "function",
-	},
-] as const;
+import { ONCHAIN_RIDDLE_ABI } from "common/abi/onchainRiddleAbi";
+import { useCallback, useEffect, useState } from "react";
+import { container } from "tsyringe";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
 interface UseContractWriteResult {
 	submitAnswer: (answer: string) => Promise<void>;
@@ -39,6 +17,7 @@ interface UseContractWriteResult {
 
 export function useContractWrite(): UseContractWriteResult {
 	const [error, setError] = useState<Error | null>(null);
+	const [hasNotifiedBackend, setHasNotifiedBackend] = useState(false);
 	const riddleService = container.resolve(RiddleService);
 
 	const { writeContract, data: hash, isPending: isWriting, isSuccess: isWriteSuccess, error: writeError, reset: resetWrite } = useWriteContract();
@@ -55,6 +34,7 @@ export function useContractWrite(): UseContractWriteResult {
 		async (answer: string) => {
 			try {
 				setError(null);
+				setHasNotifiedBackend(false);
 
 				const canSubmitResult = await riddleService.canSubmit();
 				if (!canSubmitResult.canSubmit) {
@@ -65,7 +45,7 @@ export function useContractWrite(): UseContractWriteResult {
 
 				await writeContract({
 					address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-					abi: RIDDLE_CONTRACT_ABI,
+					abi: ONCHAIN_RIDDLE_ABI,
 					functionName: "submitAnswer",
 					args: [answer],
 				});
@@ -78,24 +58,30 @@ export function useContractWrite(): UseContractWriteResult {
 		[writeContract, riddleService],
 	);
 
-	// Notify backend after transaction confirmation
-	useCallback(async () => {
-		if (isConfirmed && hash) {
-			try {
-				logger.info("Transaction confirmed, notifying backend...");
-				await riddleService.submitAnswer(hash);
-			} catch (err) {
-				logger.error("Error notifying backend:", err);
-			}
+	useEffect(() => {
+		if (isConfirmed && hash && !hasNotifiedBackend) {
+			const notifyBackend = async () => {
+				try {
+					logger.info("Transaction confirmed, notifying backend...");
+					await riddleService.submitAnswer(hash);
+					setHasNotifiedBackend(true);
+					logger.info("Backend notified successfully");
+				} catch (err) {
+					logger.error("Error notifying backend:", err);
+				}
+			};
+
+			notifyBackend();
 		}
-	}, [isConfirmed, hash, riddleService])();
+	}, [isConfirmed, hash, hasNotifiedBackend, riddleService]);
 
 	const combinedError = error || writeError || confirmError;
 
-	const reset = () => {
+	const reset = useCallback(() => {
 		setError(null);
+		setHasNotifiedBackend(false);
 		resetWrite();
-	};
+	}, [resetWrite]);
 
 	return {
 		submitAnswer,

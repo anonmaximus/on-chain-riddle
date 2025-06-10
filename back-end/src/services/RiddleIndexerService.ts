@@ -2,9 +2,9 @@ import logger from "#Services/Logger";
 import { ethers } from "ethers";
 import { singleton } from "tsyringe";
 
-import ContractService from "./contract/ContractService";
 import RiddleService from "./RiddleService";
 import WebSocketService from "./WebSocketService";
+import ContractService from "./ContractService";
 
 interface RiddleToPublish {
 	question: string;
