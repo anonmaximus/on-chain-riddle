@@ -4,6 +4,7 @@ import AuthController from "./AuthController";
 import RoleController from "./RoleController";
 import UserController from "./UserController";
 import WelcomeController from "./WelcomeController";
+import RiddleController from "./RiddleController";
 
 export default (superRouter: Router) => {
 	const router = express.Router();
@@ -13,4 +14,5 @@ export default (superRouter: Router) => {
 	AuthController(router);
 	RoleController(router);
 	UserController(router);
+	RiddleController(router);
 };

@@ -79,6 +79,26 @@ model Rule {
     @@map("rules")
 }
 
+model Riddle {
+    id String @id @unique @default(uuid()) @db.Uuid()
+
+    riddleId    Int       @unique @map("riddle_id")
+    question    String
+    answer      String? // Stocké chiffré ou hashé pour sécurité
+    isActive    Boolean   @default(true) @map("is_active")
+    solvedBy    String?   @map("solved_by") @db.VarChar(255)
+    solvedAt    DateTime? @map("solved_at")
+    blockNumber Int       @map("block_number")
+    txHash      String    @map("tx_hash") @db.VarChar(255)
+
+    createdAt DateTime? @default(now()) @map("created_at")
+    updatedAt DateTime? @updatedAt @map("updated_at")
+
+    @@index([isActive])
+    @@index([solvedBy])
+    @@map("riddles")
+}
+
 enum ERuleName {
     submit_riddle_answer
 }

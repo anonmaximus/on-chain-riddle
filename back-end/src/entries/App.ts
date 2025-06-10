@@ -29,6 +29,8 @@ import Config from "#Config/index";
 import DbClient from "#Databases/DbClient";
 import proxy from "express-http-proxy";
 import http from "http";
+import WebSocketService from "#Services/WebSocketService";
+import RiddleIndexerService from "#Services/RiddleIndexerService";
 
 (async () => {
 	const config = container.resolve(Config);
@@ -67,7 +69,7 @@ import http from "http";
 	routes(subRouter);
 
 	router.use("/", proxy(`${variables.NEXTJS_HOST}:${variables.NEXTJS_PORT}`));
-	//router.use(express.static(publicDir));
+
 	const regexAPI = new RegExp(`^(?!${config.APP_ROUTINGS.API_URL}).+`);
 	router.get(regexAPI, (_req, res) => {
 		res.sendFile(path.join(publicDir, "index.html"));
@@ -76,7 +78,16 @@ import http from "http";
 	// Create HTTP server for both Express
 	const server = http.createServer(router);
 
-	// Start HTTP server
+	// Initialize WebSocket server
+	const webSocketService = container.resolve(WebSocketService);
+	webSocketService.initialize(server);
+
+	// Start the blockchain indexer
+	const riddleIndexer = container.resolve(RiddleIndexerService);
+	riddleIndexer.startListening().catch((error) => {
+		logger.error("Failed to start RiddleIndexer:", error);
+	});
+
 	server.listen(port, () => {
 		console.table(
 			[
@@ -92,14 +103,23 @@ import http from "http";
 					host: variables.NEXTJS_HOST,
 					"Root url": "/",
 				},
+				{
+					"Entry label": "WebSocket Service",
+					Port: port,
+					host: "external",
+					"Root url": "/ws",
+				},
 			],
 			["Entry label", "Port", "host", "Root url"],
 		);
 	});
 
-	// Handle graceful shutdown
 	const shutdown = async () => {
 		logger.info("Shutting down server...");
+
+		riddleIndexer.stopListening();
+
+		webSocketService.close();
 		server.close(() => {
 			logger.info("Server shut down");
 			process.exit(0);
