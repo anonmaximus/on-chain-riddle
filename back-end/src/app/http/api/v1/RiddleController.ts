@@ -69,6 +69,7 @@ export default (superRouter: Router) => {
 						solvedBy: r.solvedBy,
 						solvedAt: r.solvedAt,
 						createdAt: r.createdAt,
+						answer: r.answer,
 					})),
 				),
 			);

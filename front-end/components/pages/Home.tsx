@@ -83,8 +83,8 @@ export default function Home() {
 														Solved by: {riddle.solvedBy.slice(0, 6)}...{riddle.solvedBy.slice(-4)}
 													</p>
 												)}
-												{riddle.answer && <p className="text-sm text-default-500">Answer: {riddle.answer}</p>}
 												{riddle.solvedAt && <p className="text-sm text-default-500">Solved at: {new Date(riddle.solvedAt).toLocaleString()}</p>}
+												{riddle.answer && <p className="text-sm text-default-500">Answer: {riddle.answer}</p>}
 											</CardBody>
 										</Card>
 									))}
