@@ -16,7 +16,7 @@ export default (superRouter: Router) => {
 	superRouter.use(`/auth`, router);
 
 	const userService = container.resolve(UserService);
-	const challengeService = container.resolve(ChallengeService); // AuthService
+	const challengeService = container.resolve(ChallengeService);
 
 	router.post("/pre-sign", RequireBodyValidation(UserPreSignRequestResource), async (req, res) => {
 		const { address } = req.body;

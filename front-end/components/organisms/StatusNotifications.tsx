@@ -1,53 +1,43 @@
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { WebSocketMessage } from "@/services/WebSocketService";
-import { Alert, Progress } from "@heroui/react";
+import { Alert } from "@heroui/react";
 import { EWebsocketMessageType } from "common/enums/EWebsocketMessageType";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface NotificationWithId extends WebSocketMessage {
 	id: string;
-	progress: number;
 }
 
 export function StatusNotifications() {
 	const { lastMessage, isConnected } = useWebSocket();
 	const [notifications, setNotifications] = useState<NotificationWithId[]>([]);
 	const [showConnectionStatus, setShowConnectionStatus] = useState(true);
-
-	const updateProgress = useCallback(() => {
-		setNotifications((prev) =>
-			prev.map((notification) => {
-				const elapsed = Date.now() - notification.timestamp;
-				const progress = Math.min((elapsed / 10000) * 100, 100);
-				return { ...notification, progress };
-			}),
-		);
-	}, []);
-
-	useEffect(() => {
-		if (notifications.length === 0) return;
-
-		const interval = setInterval(updateProgress, 50);
-		return () => clearInterval(interval);
-	}, [notifications.length, updateProgress]);
+	const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
 	useEffect(() => {
 		if (lastMessage) {
 			const newNotification: NotificationWithId = {
 				...lastMessage,
 				id: `${lastMessage.timestamp}-${Math.random()}`,
-				progress: 0,
 			};
 
-			setNotifications((prev) => [...prev, newNotification].slice(-5));
+			setNotifications((prev) => [...prev, newNotification]);
 
 			const timer = setTimeout(() => {
 				setNotifications((prev) => prev.filter((n) => n.id !== newNotification.id));
-			}, 10000);
+				timersRef.current.delete(newNotification.id);
+			}, 5000);
 
-			return () => clearTimeout(timer);
+			timersRef.current.set(newNotification.id, timer);
 		}
 	}, [lastMessage]);
+
+	useEffect(() => {
+		return () => {
+			timersRef.current.forEach((timer) => clearTimeout(timer));
+			timersRef.current.clear();
+		};
+	}, []);
 
 	useEffect(() => {
 		if (isConnected) {
@@ -63,7 +53,7 @@ export function StatusNotifications() {
 			case EWebsocketMessageType.RIDDLE_PUBLISHED:
 				return {
 					title: "🎯 Nouvelle Énigme Publiée !",
-					description: `Une nouvelle énigme est maintenant disponible`,
+					description: "Une nouvelle énigme est maintenant disponible",
 					color: "success" as const,
 				};
 
@@ -82,15 +72,15 @@ export function StatusNotifications() {
 				};
 
 			case EWebsocketMessageType.USER_SUBMISSION_UPDATE:
-				const statusColors = {
-					pending: "warning" as const,
-					success: "success" as const,
-					failed: "danger" as const,
-				};
 				const statusEmojis = {
 					pending: "⏳",
 					success: "✅",
 					failed: "❌",
+				};
+				const statusColors = {
+					pending: "warning" as const,
+					success: "success" as const,
+					failed: "danger" as const,
 				};
 				return {
 					title: `${statusEmojis[message.data.status as keyof typeof statusEmojis]} Mise à jour de soumission`,
@@ -108,6 +98,12 @@ export function StatusNotifications() {
 	};
 
 	const handleClose = (notificationId: string) => {
+		// Nettoyer le timer associé
+		const timer = timersRef.current.get(notificationId);
+		if (timer) {
+			clearTimeout(timer);
+			timersRef.current.delete(notificationId);
+		}
 		setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
 	};
 
@@ -136,42 +132,20 @@ export function StatusNotifications() {
 					}
 				}
 
-				@keyframes fadeInScale {
-					from {
-						transform: scale(0.9);
-						opacity: 0;
-					}
-					to {
-						transform: scale(1);
-						opacity: 1;
-					}
+				.notification-enter {
+					animation: slideInRight 0.3s cubic-bezier(0.2, 0, 0.2, 1);
 				}
 
-				.toast-enter {
-					animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-				}
-
-				.toast-exit {
-					animation: slideOutRight 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-				}
-
-				.connection-status {
-					animation: fadeInScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-				}
-
-				.progress-bar-smooth {
-					transition: all 0.1s ease-out;
+				.notification-item {
+					transition: all 0.2s ease-out;
 				}
 			`}</style>
 
 			<div className="fixed top-20 right-4 z-50 space-y-3 max-w-sm">
+				{/* Statut de connexion */}
 				{showConnectionStatus && (
-					<div className="connection-status">
-						<Alert
-							color={isConnected ? "success" : "warning"}
-							className="shadow-lg backdrop-blur-sm bg-opacity-95"
-							isClosable
-							onClose={() => setShowConnectionStatus(false)}>
+					<div className="notification-enter">
+						<Alert color={isConnected ? "success" : "warning"} className="shadow-lg notification-item" isClosable onClose={() => setShowConnectionStatus(false)}>
 							<div className="flex items-center gap-2">
 								<div className={`w-2 h-2 rounded-full ${isConnected ? "bg-success" : "bg-warning"} animate-pulse`} />
 								<span className="text-sm font-medium">{isConnected ? "Connecté aux mises à jour temps réel" : "Connexion aux mises à jour..."}</span>
@@ -180,31 +154,16 @@ export function StatusNotifications() {
 					</div>
 				)}
 
+				{/* Notifications */}
 				{notifications.map((notification) => {
 					const content = getNotificationContent(notification);
-					const isExpiring = notification.progress > 80;
 
 					return (
-						<div key={notification.id} className="toast-enter">
-							<Alert
-								color={content.color}
-								className={`shadow-lg backdrop-blur-sm bg-opacity-95 border transition-all duration-200 ${
-									isExpiring ? "scale-95 opacity-90" : "scale-100 opacity-100"
-								}`}
-								isClosable
-								onClose={() => handleClose(notification.id)}>
-								<div className="space-y-2">
-									<div className="flex items-start justify-between gap-2">
-										<div className="flex-1 min-w-0">
-											<p className="font-semibold text-sm leading-tight">{content.title}</p>
-											<p className="text-xs mt-1 opacity-90 leading-relaxed">{content.description}</p>
-										</div>
-									</div>
-
-									<div className="relative">
-										<Progress size="sm" value={100 - notification.progress} className="progress-bar-smooth" color={content.color} showValueLabel={false} />
-										<div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-									</div>
+						<div key={notification.id} className="notification-enter">
+							<Alert color={content.color} className="shadow-lg notification-item" isClosable onClose={() => handleClose(notification.id)}>
+								<div>
+									<p className="font-semibold text-sm">{content.title}</p>
+									<p className="text-xs mt-1 opacity-90">{content.description}</p>
 								</div>
 							</Alert>
 						</div>

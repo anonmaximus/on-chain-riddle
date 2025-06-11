@@ -17,10 +17,10 @@ interface UseContractWriteResult {
 
 export function useContractWrite(): UseContractWriteResult {
 	const [error, setError] = useState<Error | null>(null);
-	const [hasNotifiedBackend, setHasNotifiedBackend] = useState(false);
+	const [hasSubmit, setHasSubmit] = useState(false);
 	const riddleService = container.resolve(RiddleService);
 
-	const { writeContract, data: hash, isPending: isWriting, isSuccess: isWriteSuccess, error: writeError, reset: resetWrite } = useWriteContract();
+	const { writeContract, data: hash, isPending, error: writeError, reset: resetWrite } = useWriteContract();
 
 	const {
 		isLoading: isConfirming,
@@ -30,11 +30,12 @@ export function useContractWrite(): UseContractWriteResult {
 		hash,
 	});
 
+	const combinedError = error || writeError || confirmError;
+
 	const submitAnswer = useCallback(
 		async (answer: string) => {
 			try {
 				setError(null);
-				setHasNotifiedBackend(false);
 
 				const canSubmitResult = await riddleService.canSubmit();
 				if (!canSubmitResult.canSubmit) {
@@ -43,12 +44,13 @@ export function useContractWrite(): UseContractWriteResult {
 
 				logger.info("Submitting answer to contract...");
 
-				await writeContract({
+				writeContract({
 					address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
 					abi: ONCHAIN_RIDDLE_ABI,
 					functionName: "submitAnswer",
 					args: [answer],
 				});
+				setHasSubmit(true);
 			} catch (err) {
 				logger.error("Error submitting answer:", err);
 				setError(err as Error);
@@ -59,33 +61,29 @@ export function useContractWrite(): UseContractWriteResult {
 	);
 
 	useEffect(() => {
-		if (isConfirmed && hash && !hasNotifiedBackend) {
-			const notifyBackend = async () => {
-				try {
-					logger.info("Transaction confirmed, notifying backend...");
-					await riddleService.submitAnswer(hash);
-					setHasNotifiedBackend(true);
+		if (isConfirmed && hash && hasSubmit) {
+			logger.info("Transaction confirmed, notifying backend...");
+			riddleService
+				.submitAnswer(hash)
+				.then(() => {
 					logger.info("Backend notified successfully");
-				} catch (err) {
+					reset();
+				})
+				.catch((err) => {
 					logger.error("Error notifying backend:", err);
-				}
-			};
-
-			notifyBackend();
+				});
 		}
-	}, [isConfirmed, hash, hasNotifiedBackend, riddleService]);
-
-	const combinedError = error || writeError || confirmError;
+	}, [isConfirmed, hash, riddleService]);
 
 	const reset = useCallback(() => {
 		setError(null);
-		setHasNotifiedBackend(false);
+		setHasSubmit(false);
 		resetWrite();
 	}, [resetWrite]);
 
 	return {
 		submitAnswer,
-		isSubmitting: isWriting,
+		isSubmitting: isPending,
 		isConfirming,
 		isSuccess: isConfirmed,
 		error: combinedError as Error | null,
