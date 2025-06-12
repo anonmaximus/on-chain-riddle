@@ -24,11 +24,6 @@ Our architecture follows an **event-driven approach** with database caching for 
 4. **WebSockets** provide real-time updates to frontend
 5. **Frontend** reads from API and displays real-time notifications
 
-**Why this approach?**
-- ⚡ **Performance**: Fast database reads instead of blockchain queries
-- 🔄 **Real-time**: WebSocket notifications for immediate updates
-- 🛡️ **Reliability**: No direct blockchain dependency for UI
-- 📈 **Scalability**: Handles multiple concurrent users efficiently
 
 ## 🛠️ Tech Stack
 
@@ -113,6 +108,15 @@ cp blockchain/.env.example blockchain/.env
 - `BOT_PRIVATE_KEY` - Private key for contract deployment
 - `ETHERSCAN_API_KEY` - Etherscan API key (optional)
 
+### How to get required environment values:
+
+1. Deploy the smart contract on Sepolia testnet using Hardhat. Follow the instructions in the [blockchain README](./blockchain/README.md) to deploy and get the contract address.
+2. Create an Infura account to get your API key for Ethereum RPC access.
+3. Create a WalletConnect project to get your project ID.
+4. Create an Etherscan account for optional contract verification.
+5. Create a bot wallet for contract interactions and obtain its private key.
+
+
 ### 3. Database Setup
 
 ```bash
@@ -134,73 +138,6 @@ npm run watch:dev
 The application will be available at:
 - **Frontend**: http://localhost:3002
 - **Backend API**: http://localhost:3000/api
-- **WebSocket**: ws://localhost:3000/ws
-
-## 📋 Available Scripts
-
-### Root Level
-```bash
-npm run postinstall        # Install all dependencies
-npm run build             # Build all projects
-npm run watch:dev         # Start development mode (backend + frontend)
-npm run start:prod        # Start production mode
-npm run format            # Format code with Prettier
-```
-
-### Individual Projects
-```bash
-# Backend
-cd back-end
-npm run watch             # Development with auto-reload
-npm run build             # Build TypeScript
-npm run start:prod        # Production start
-npm run migrate:dev       # Run database migrations
-
-# Frontend  
-cd front-end
-npm run dev              # Development server
-npm run build            # Production build
-npm run start            # Production server
-
-# Blockchain
-cd blockchain
-npx hardhat compile      # Compile contracts
-npx hardhat test         # Run tests
-npx hardhat run scripts/deploy.ts --network sepolia  # Deploy to Sepolia
-```
-
-## 🔧 Development Workflow
-
-1. **Smart Contract Changes**: Update contracts in `blockchain/contracts/`
-2. **API Changes**: Modify backend in `back-end/src/`
-3. **Frontend Changes**: Update React components in `front-end/`
-4. **Shared Types**: Add common resources in `common/src/resources/`
-
-## 🌐 Deployment Notes
-
-### Database
-- Production: Configure `DATABASE_URL` for your PostgreSQL instance
-- Run migrations: `npm run migrate:deploy`
-
-### Smart Contract
-- A contract is already deployed on Sepolia: `0x2E81B40466EA5f60FF6d16EE08bdB1bD406DbA42`
-- To redeploy: Follow instructions in `blockchain/README.md`
-
-### Backend
-- Build: `npm run build:back-end`
-- Start: `npm run start:prod` (includes migrations and seeding)
-
-### Frontend
-- Build: `npm run build:front-end`
-- Deploy: Upload `front-end/.next` build output to your hosting provider
-
-## 🔐 Security Features
-
-- **Wallet Authentication**: Secure signature-based login with dynamic nonces
-- **JWT Tokens**: Access and refresh token system
-- **Role-Based Access**: Permission system for different user actions
-- **Rate Limiting**: Protection against spam submissions
-- **Input Validation**: Comprehensive request/response validation
 
 ## 📚 Project Structure Details
 

@@ -239,97 +239,6 @@ The package uses class-validator decorators for type-safe validation:
 @IsValidSignature()  // Custom validator for cryptographic signatures
 ```
 
-### Custom Decorators
-
-**Custom** - Synchronous custom validation:
-```typescript
-@Custom((value) => value.length > 5, {
-  message: 'Value must be longer than 5 characters'
-})
-public customField!: string;
-```
-
-**CustomAsync** - Asynchronous custom validation:
-```typescript
-@CustomAsync(async (value) => {
-  return await someAsyncValidation(value);
-})
-public asyncField!: string;
-```
-
-**Match** - Field matching validation:
-```typescript
-@Match('password', { message: 'Passwords must match' })
-public confirmPassword!: string;
-```
-
-## 🔧 Dependency Injection
-
-### Service Tokens
-
-The package provides service tokens for dependency injection:
-
-```typescript
-// Abstract base classes for service injection
-export default class UserServiceClassToken {
-  public async exists(_id: string): Promise<boolean> {
-    throw new Error("Must be implemented by actual service");
-  }
-}
-```
-
-### Dependency Injection Container
-
-**Di.ts** - Central dependency injection manager:
-```typescript
-export default abstract class Di {
-  private static userService: UserServiceClassToken;
-  private static roleService: RoleServiceClassToken;
-  
-  public static getUserService() {
-    if (!this.userService) throw new Error("UserService not set");
-    return this.userService;
-  }
-  
-  public static setUserService(userService: UserServiceClassToken) {
-    this.userService = userService;
-  }
-}
-```
-
-## 🔄 Usage Examples
-
-### Frontend Usage
-
-```typescript
-import RiddleResponseResource from 'common/resources/Riddle/RiddleResponseResource';
-import { EWebsocketMessageType } from 'common/enums/EWebsocketMessageType';
-
-// Hydrate API response
-const riddle = RiddleResponseResource.hydrate<RiddleResponseResource>({
-  id: '123',
-  question: 'What has keys but no locks?',
-  isActive: true
-});
-
-// Validate before sending
-await riddle.validateOrReject();
-```
-
-### Backend Usage
-
-```typescript
-import SubmitAnswerRequestResource from 'common/resources/Riddle/SubmitAnswerRequestResource';
-import { ONCHAIN_RIDDLE_ABI } from 'common/abi/onchainRiddleAbi';
-
-// Validate incoming request
-const request = SubmitAnswerRequestResource.hydrate<SubmitAnswerRequestResource>(req.body);
-await request.validateOrReject();
-
-// Use contract ABI
-const contract = new ethers.Contract(address, ONCHAIN_RIDDLE_ABI, provider);
-```
-
 ## 🔧 Development
 
 ### Adding New Resources
@@ -363,27 +272,6 @@ export enum ENewEnum {
 
 2. Export from main index
 3. Use in resources with proper typing
-
-### Custom Validators
-
-Create custom validation decorators:
-```typescript
-export function IsEthereumAddress(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
-    registerDecorator({
-      name: 'isEthereumAddress',
-      target: object.constructor,
-      propertyName: propertyName,
-      options: validationOptions,
-      validator: {
-        validate(value: any) {
-          return typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value);
-        }
-      }
-    });
-  };
-}
-```
 
 ## 📋 Available Scripts
 

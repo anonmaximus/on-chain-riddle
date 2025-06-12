@@ -88,13 +88,9 @@ export default class UserService implements UserServiceClassToken {
 	}
 
 	public async signIn(userResource: UserSignInRequestResource) {
-		logger.debug(`Starting sign in for address: ${userResource.address}`);
-
 		const normalizedAddress = this.normalizeAddress(userResource.address);
-		logger.debug(`Normalized address: ${normalizedAddress}`);
 
 		const user = await this.getByAddress(normalizedAddress);
-		logger.debug(`User found: ${!!user}`, { userId: user?.id });
 
 		if (!user) {
 			logger.debug("Sign in failed: User not found");
@@ -105,14 +101,9 @@ export default class UserService implements UserServiceClassToken {
 			logger.debug("Sign in failed: No challenge found for user", { userId: user.id });
 			throw new Error("Challenge not found");
 		}
-		logger.debug("Challenge found", { nonce: user.challenge.nonce });
 
 		const message = `Sign this message to authenticate: ${user.challenge.nonce}`;
-		logger.debug("Verification message created", { message });
-
-		logger.debug("Verifying signature", { signature: userResource.signature.substring(0, 20) + "..." });
 		const recoveredAddress = ethers.verifyMessage(message, userResource.signature);
-		logger.debug("Recovered address from signature", { recoveredAddress });
 
 		if (recoveredAddress.toLowerCase() !== normalizedAddress) {
 			logger.debug("Sign in failed: Invalid signature - address mismatch", {
@@ -121,9 +112,6 @@ export default class UserService implements UserServiceClassToken {
 			});
 			throw new Error("Invalid signature: address mismatch");
 		}
-		logger.debug("Signature verified successfully");
-
-		logger.debug("Updating user role to signed", { userId: user.id });
 		const userWithUpdatedRole = await this.dbClient.user.update({
 			where: {
 				id: user.id,
@@ -144,13 +132,9 @@ export default class UserService implements UserServiceClassToken {
 				},
 			},
 		});
-		logger.debug("User role updated successfully", { role: userWithUpdatedRole.role.name });
-
-		logger.debug("Generating JWT pair");
 		const jwtPair = await this.authService.generateJwtPair({
 			user: UserJwtResource.hydrate<UserJwtResource>(userWithUpdatedRole),
 		});
-		logger.debug("JWT pair generated successfully");
 
 		return jwtPair;
 	}
